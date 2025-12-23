@@ -1,18 +1,21 @@
 "use client";
 import { useState, useMemo } from "react";
 
-/* ================= UI CONSTANTS ================= */
+/* ================= CONSTANTS ================= */
 
 const MIN_BOX_WIDTH = 250;
 const MIN_BOX_HEIGHT = 250;
 
-// monospace approx
-const CHAR_PIXEL = 8; // per character width
-const LINE_PIXEL = 22; // per line height
+const MAX_CHARS_PER_LINE = 60;
+const MAX_LINES_PER_BLOCK = 12;
+
+// monospace approx sizes
+const CHAR_PIXEL = 8;
+const LINE_PIXEL = 22;
 
 /* ================= HELPERS ================= */
 
-// build lines (no word break)
+// build lines (NO word break)
 const buildLines = (words: string[], maxChars: number) => {
   const lines: string[] = [];
   let current = "";
@@ -61,23 +64,45 @@ export default function Home() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editedText, setEditedText] = useState<string | null>(null);
 
-  // 🔢 user controls (can go below 35 / 6)
-  const [maxChars, setMaxChars] = useState(35);
-  const [linesPerBlock, setLinesPerBlock] = useState(6);
+  // user inputs
+  const [maxChars, setMaxChars] = useState(45);
+  const [linesPerBlock, setLinesPerBlock] = useState(8);
+
+  // clamp inputs
+  const safeMaxChars = Math.min(Math.max(1, maxChars), MAX_CHARS_PER_LINE);
+  const safeLinesPerBlock = Math.min(
+    Math.max(1, linesPerBlock),
+    MAX_LINES_PER_BLOCK
+  );
 
   // build blocks
   const blocks = useMemo(() => {
-    return buildBlocks(
-      editedText ?? text,
-      Math.max(1, maxChars),
-      Math.max(1, linesPerBlock)
-    );
-  }, [text, editedText, maxChars, linesPerBlock]);
+    return buildBlocks(editedText ?? text, safeMaxChars, safeLinesPerBlock);
+  }, [text, editedText, safeMaxChars, safeLinesPerBlock]);
 
-  // 🔲 dynamic box size (MIN 250×250)
-  const boxWidth = Math.max(MIN_BOX_WIDTH, maxChars * CHAR_PIXEL + 40);
+  // 🔹 content-driven size calculation
+  const maxLinesUsed = Math.max(...blocks.map((b) => b.split("\n").length), 1);
 
-  const boxHeight = Math.max(MIN_BOX_HEIGHT, linesPerBlock * LINE_PIXEL + 80);
+  const maxLineLength = Math.max(
+    ...blocks.flatMap((b) => b.split("\n").map((line) => line.length)),
+    1
+  );
+
+  const boxWidth = Math.max(
+    MIN_BOX_WIDTH,
+    Math.min(
+      maxLineLength * CHAR_PIXEL + 40,
+      MAX_CHARS_PER_LINE * CHAR_PIXEL + 40
+    )
+  );
+
+  const boxHeight = Math.max(
+    MIN_BOX_HEIGHT,
+    Math.min(
+      maxLinesUsed * LINE_PIXEL + 80,
+      MAX_LINES_PER_BLOCK * LINE_PIXEL + 80
+    )
+  );
 
   /* ===== SAVE EDIT ===== */
   const handleSaveEdit = (index: number, value: string) => {
@@ -97,20 +122,42 @@ export default function Home() {
           <label className="text-sm block mb-1">Characters per line</label>
           <input
             type="number"
+            min={1}
+            max={MAX_CHARS_PER_LINE}
             value={maxChars}
-            onChange={(e) => setMaxChars(Number(e.target.value))}
+            onChange={(e) => {
+              const val = Number(e.target.value);
+
+              if (Number.isNaN(val)) return;
+
+              setMaxChars(Math.min(Math.max(35, val), MAX_CHARS_PER_LINE));
+            }}
             className="border px-2 py-1 w-28"
           />
+          <p className="text-xs text-gray-500 mt-1">
+            35 – {MAX_CHARS_PER_LINE}
+          </p>
         </div>
 
         <div>
           <label className="text-sm block mb-1">Lines per block</label>
           <input
             type="number"
+            min={1}
+            max={MAX_LINES_PER_BLOCK}
             value={linesPerBlock}
-            onChange={(e) => setLinesPerBlock(Number(e.target.value))}
+            onChange={(e) => {
+              const val = Number(e.target.value);
+
+              if (Number.isNaN(val)) return;
+
+              setLinesPerBlock(Math.min(Math.max(1, val), MAX_LINES_PER_BLOCK));
+            }}
             className="border px-2 py-1 w-28"
           />
+          <p className="text-xs text-gray-500 mt-1">
+            1 – {MAX_LINES_PER_BLOCK}
+          </p>
         </div>
       </div>
 
@@ -136,19 +183,22 @@ export default function Home() {
           <div
             key={index}
             className="bg-white border shadow flex flex-col"
-            style={{
-              width: boxWidth,
-              height: boxHeight,
-            }}
+            style={{ width: boxWidth, height: boxHeight }}
           >
             {/* HEADER */}
             <div className="px-3 py-2 border-b text-sm font-semibold shrink-0">
               Block {index + 1}
             </div>
 
-            {/* TEXT AREA (flexible but scroll-safe) */}
+            {/* TEXT AREA (SCROLL ONLY HERE) */}
             <div
-              className="p-3 font-mono text-sm whitespace-pre-wrap leading-relaxed text-justify overflow-auto"
+              className="
+                p-3 font-mono text-sm
+                whitespace-pre-wrap
+                leading-relaxed
+                text-justify
+                overflow-auto
+              "
               style={{
                 flex: 1,
                 textJustify: "inter-word",
@@ -160,13 +210,13 @@ export default function Home() {
               {editingIndex === index ? (
                 <textarea
                   className="
-              w-full h-full resize-none
-              outline-none border-none
-              bg-transparent font-mono
-              whitespace-pre-wrap
-              text-justify
-              leading-relaxed
-            "
+                    w-full h-full resize-none
+                    outline-none border-none
+                    bg-transparent font-mono
+                    whitespace-pre-wrap
+                    text-justify
+                    leading-relaxed
+                  "
                   style={{
                     textJustify: "inter-word",
                     textAlignLast: "left",
@@ -181,7 +231,7 @@ export default function Home() {
               )}
             </div>
 
-            {/* FOOTER (ALWAYS FIXED) */}
+            {/* FOOTER – NEVER BREAKS */}
             <div className="flex justify-between items-center px-3 py-2 border-t shrink-0">
               <button
                 onClick={() => copyBlock(block)}
