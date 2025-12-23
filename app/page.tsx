@@ -63,6 +63,7 @@ export default function Home() {
   const [text, setText] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editedText, setEditedText] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
 
   // user inputs
   const [maxChars, setMaxChars] = useState(45);
@@ -179,78 +180,92 @@ export default function Home() {
 
       {/* BLOCKS */}
       <div className="flex flex-wrap gap-4 justify-center">
-        {blocks.map((block, index) => (
-          <div
-            key={index}
-            className="bg-white border shadow flex flex-col"
-            style={{ width: boxWidth, height: boxHeight }}
-          >
-            {/* HEADER */}
-            <div className="px-3 py-2 border-b text-sm font-semibold shrink-0">
-              Block {index + 1}
-            </div>
+        {blocks.map((block, index) => {
+          const isEditing = editingIndex === index;
 
-            {/* TEXT AREA (SCROLL ONLY HERE) */}
+          return (
             <div
-              className="
-                p-3 font-mono text-sm
-                whitespace-pre-wrap
-                leading-relaxed
-                text-justify
-                overflow-auto
-              "
-              style={{
-                flex: 1,
-                textJustify: "inter-word",
-                textAlignLast: "left",
-                wordSpacing: "0.02em",
-                hyphens: "none",
-              }}
+              key={index}
+              className="bg-white border shadow flex flex-col"
+              style={{ width: boxWidth, height: boxHeight }}
             >
-              {editingIndex === index ? (
-                <textarea
-                  className="
-                    w-full h-full resize-none
-                    outline-none border-none
-                    bg-transparent font-mono
-                    whitespace-pre-wrap
-                    text-justify
-                    leading-relaxed
-                  "
-                  style={{
-                    textJustify: "inter-word",
-                    textAlignLast: "left",
-                    wordSpacing: "0.02em",
-                    hyphens: "none",
-                  }}
-                  defaultValue={block}
-                  onBlur={(e) => handleSaveEdit(index, e.target.value)}
-                />
-              ) : (
-                block
-              )}
-            </div>
+              {/* HEADER */}
+              <div className="px-3 py-2 border-b text-sm font-semibold shrink-0">
+                Block {index + 1}
+              </div>
 
-            {/* FOOTER – NEVER BREAKS */}
-            <div className="flex justify-between items-center px-3 py-2 border-t shrink-0">
-              <button
-                onClick={() => copyBlock(block)}
-                className="text-xs px-3 py-1 rounded bg-blue-600 text-white"
+              {/* TEXT AREA (SCROLL ONLY WHEN NOT EDITING) */}
+              <div
+                className={`
+    p-3 font-mono text-sm
+    whitespace-pre-wrap
+    leading-relaxed
+    text-justify
+    ${isEditing ? "overflow-hidden" : "overflow-auto"}
+  `}
+                style={{
+                  flex: 1,
+                  textJustify: "inter-word",
+                  textAlignLast: "left",
+                  wordSpacing: "0.02em",
+                  hyphens: "none",
+                }}
               >
-                Copy
-              </button>
+                {isEditing ? (
+                  <textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    className="
+    w-full min-h-full resize-none
+    outline-none border-none
+    bg-transparent font-mono
+    whitespace-pre-wrap
+    leading-relaxed
+    overflow-auto
+  "
+                    style={{
+                      textJustify: "inter-word",
+                      textAlignLast: "left",
+                      wordSpacing: "0.02em",
+                      hyphens: "none",
+                    }}
+                  />
+                ) : (
+                  block
+                )}
+              </div>
 
-              <button
-                onClick={() =>
-                  setEditingIndex(editingIndex === index ? null : index)
-                }
-                className="text-xs px-3 py-1 rounded bg-gray-200"
-              >
-                {editingIndex === index ? "Save" : "Edit"}
-              </button>
+              {/* FOOTER – NEVER BREAKS */}
+              <div className="flex justify-between items-center px-3 py-2 border-t shrink-0">
+                <button
+                  onClick={() => copyBlock(block)}
+                  className="text-xs px-3 py-1 rounded bg-blue-600 text-white"
+                >
+                  Copy
+                </button>
+
+                {isEditing ? (
+                  <button
+                    onClick={() => handleSaveEdit(index, draft)}
+                    className="text-xs px-3 py-1 rounded bg-green-600 text-white"
+                  >
+                    Save
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setEditingIndex(index);
+                      setDraft(block);
+                    }}
+                    className="text-xs px-3 py-1 rounded bg-gray-200"
+                  >
+                    Edit
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </main>
   );
