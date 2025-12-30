@@ -131,7 +131,7 @@ export default function Home() {
 
               if (Number.isNaN(val)) return;
 
-              setMaxChars(Math.min(Math.max(35, val), MAX_CHARS_PER_LINE));
+              setMaxChars(Math.min(Math.max(10, val), MAX_CHARS_PER_LINE));
             }}
             className="border px-2 py-1 w-28"
           />
